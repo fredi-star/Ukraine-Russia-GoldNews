@@ -1,0 +1,210 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "feedUrl": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=GC=F&region=US&lang=en-US"
+      },
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a5d7a0a8-4a4c-49ec-b81e-b8223bc97bf0",
+      "name": "RSS Feed Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wir definieren worauf wir achten\nconst keywords = ['NATO', 'Russia', 'Escalation', 'Gold', 'War'];\n\n// Wir filtern alles raus, was die Keywords nicht hat\nconst results = items.filter(item => {\n  const title = (item.json.title || \"\").toLowerCase();\n  // Manchmal heißt es description, manchmal contentSnippet\n  const desc = (item.json.description || item.json.contentSnippet || \"\").toLowerCase();\n  const textToCheck = title + \" \" + desc;\n\n  // Wenn eines der Keywords im Text ist -> behalten!\n  return keywords.some(keyword => textToCheck.includes(keyword.toLowerCase()));\n});\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "269a75c4-fca0-497e-8aa2-e1aeb2bde7f7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein Finanz-Experte.\nAnalysiere diesen Text: \"{{ $json.title }} - {{ $json.contentSnippet }}\"\n\nIst das gut für Gold (bullish), schlecht (bearish) oder egal (neutral)?\nWie dringend ist es (1-10)?\n\nAntworte NUR mit diesem JSON Format (kein Markdown, kein Text davor):\n{\n  \"sentiment\": \"bullish/neutral/bearish\",\n  \"reason\": \"Maximal 10 Wörter\",\n  \"urgency\": 5\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "e887e066-df28-423d-9e45-419e4b23219e",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "s2km60v9SxWSI0q8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of items) {\n  try {\n    // Gemini speichert die Antwort oft in 'text' oder 'content'\n    // Wir suchen automatisch, wo der Text steckt\n    const output = item.json.content || item.json.text || item.json.output || \"\";\n\n    // 1. Markdown Code-Bloecke entfernen (```json ... ```)\n    const cleanJson = output.replace(/```json/g, '').replace(/```/g, '').trim();\n\n    // 2. Parsen\n    const data = JSON.parse(cleanJson);\n\n    // 3. Daten speichern\n    item.json.ai_sentiment = data.sentiment;\n    item.json.ai_urgency = data.urgency;\n    item.json.ai_reason = data.reason;\n    \n  } catch (error) {\n    // Falls Gemini Quatsch erzählt hat, setzen wir Urgency auf 0 -> wird ignoriert\n    item.json.error = error.message;\n    item.json.ai_urgency = 0; \n  }\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "7bb310cc-67cd-402a-82a0-9fccbed4adee",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9b3feaa9-b5d8-4cca-9b7b-fa9fb3e8d1c4",
+              "leftValue": "={{ $json.ai_urgency }}",
+              "rightValue": 8,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        976,
+        0
+      ],
+      "id": "85e62b0d-13de-4311-90ba-30f6b09690d6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "(input Chat ID)",
+        "text": "=🚨 GOLD NEWS ALARM 🚨  Titel: {{ $('RSS Feed Trigger').item.json.title }} ------------------- Dringlichkeit: {{ $json.ai_urgency }}/10  Begründung: {{ $json.finishReason }}  🔗 Link:{{ $('RSS Feed Trigger').item.json.link }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1184,
+        -96
+      ],
+      "id": "23be71dc-b536-481b-b6e3-a064cf9068cd",
+      "name": "Send a text message",
+      "webhookId": "d72af52b-9b1d-43ad-bbc5-135f211d3655",
+      "credentials": {
+        "telegramApi": {
+          "id": "kKSoZE6KAXqpLfRf",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "RSS Feed Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8cb7a636-1a68-4537-beec-169872e54bd8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6fc592d53978312d1fac6d6c100774cd5a3a92b7fe9bc83838f5dd3fc6158cfd"
+  },
+  "id": "QntyCIyAAWVGNAMu",
+  "tags": []
+}
