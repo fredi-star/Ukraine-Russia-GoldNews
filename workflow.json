@@ -1,5 +1,5 @@
 {
-  "name": "My workflow",
+  "name": "RSS->Gemini Rating->telegram Push",
   "nodes": [
     {
       "parameters": {
