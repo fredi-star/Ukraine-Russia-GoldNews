@@ -6,7 +6,7 @@ Eine Automatisierung die mir Breaking News des Ukraine Kriegs per push Nachricht
 
 A serverless automation workflow that monitors financial RSS feeds for geopolitical events and analyzes their potential impact on gold prices .
 
-!(architecture.png)
+![Bild vom Workflow](architecture.png)
 
 ## Overview
 I built this tool to automate the monitoring of breaking news. Instead of checking feeds manually, this workflow filters news for specific keywords (e.g., NATO, Escalation) and uses an LLM to determine if the news is "bullish" for gold. If the urgency score is high enough, I get a ping on Telegram.
