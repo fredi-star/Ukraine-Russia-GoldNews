@@ -1,2 +1,2 @@
 # Ukraine-Russia-GoldNews
-Eine Automatisierung die mir Breaking News des Ukraine Kriegs per push Nachricht senden kann, da ich Interesse daran hab zu sehen wie schnell der Markt reagiert und ob vielleicht  durch private langsame und  ängstliche Markteilnehmer eine kleines Verkaufs/Kaufs Fenster besteht, was noch nicht genutzt wird. 
+Eine Automatisierung die mir Breaking News des Ukraine Kriegs per push Nachricht senden kann, sofern Gemini diese als wichtig genug einstuft, da ich Interesse daran hab zu sehen wie schnell der Markt reagiert und ob vielleicht  durch private langsame und  ängstliche Markteilnehmer eine kleines Verkaufs/Kaufs Fenster besteht, was noch nicht von großen Akteuren voll genutzt wird.
